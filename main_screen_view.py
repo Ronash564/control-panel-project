@@ -3,6 +3,8 @@ print("main_screen.py is being imported")
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QTextEdit
 from PyQt5.QtWidgets import QListWidgetItem
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QSize
 
 class MainScreen(QWidget):
     def __init__(self, parent):
@@ -28,7 +30,10 @@ class MainScreen(QWidget):
         
         # Add, Edit, and Show Script buttons
         self.add_button = QPushButton("Add New Script")
+        self.add_button.setIcon(QIcon("icons/plus.png"))  # Path to your plus icon
+        self.add_button.setIconSize(QSize(24, 24))  # Set icon size
         button_layout.addWidget(self.add_button)
+       
         
         self.edit_button = QPushButton("Edit Selected Script")
         button_layout.addWidget(self.edit_button)

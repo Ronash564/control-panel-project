@@ -1,5 +1,6 @@
 # control_panel.py
 import sys
+import os
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, 
     QListWidgetItem, QTextEdit, QDialog, QStackedWidget, QCheckBox, QLabel
@@ -11,10 +12,20 @@ from dialog_manager import ScriptDialog
 from process_manager import ScriptRunner
 from script_detail_screen import ScriptDetailScreen
 from styles import get_light_mode_stylesheet, get_dark_mode_stylesheet  # Import the styles from styles.py
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QSize
+from login_dialog import LoginDialog
 
 class ControlPanel(QWidget):
     def __init__(self):
         super().__init__()
+
+        login_dialog = LoginDialog()
+        if login_dialog.exec_() == QDialog.Accepted:
+            self.current_user = login_dialog.authenticated_user
+            print(f"Welcome, {self.current_user}!")
+        else:
+            sys.exit() 
         
         self.setWindowTitle("Script Control Panel")
         self.setGeometry(300, 100, 800, 600)
@@ -71,11 +82,23 @@ class ControlPanel(QWidget):
         # Button layout
         button_layout = QHBoxLayout()
         
-        # Add, Edit, and Show Script buttons
+        icon_path = os.path.join(os.path.dirname(__file__), "icons/plus.png")
+
         self.add_button = QPushButton("Add New Script")
+        self.add_button.setIcon(QIcon(icon_path))  # Use absolute path
+        self.add_button.setIconSize(QSize(16, 16))  # Explicitly set icon size
         self.add_button.clicked.connect(self.add_script)
         button_layout.addWidget(self.add_button)
         
+        #adding users button
+        self.manage_users_button = QPushButton("Manage Users")
+        self.manage_users_button.setIcon(QIcon(os.path.join(os.path.dirname(__file__), "icons/manage_users.png")))
+        self.manage_users_button.setIconSize(QSize(16, 16))
+        self.manage_users_button.clicked.connect(self.open_user_management)
+
+        button_layout.addWidget(self.manage_users_button)
+
+
         self.edit_button = QPushButton("Edit Selected Script")
         self.edit_button.clicked.connect(self.edit_script)
         button_layout.addWidget(self.edit_button)
@@ -128,10 +151,20 @@ class ControlPanel(QWidget):
         self.stacked_widget.addWidget(detail_screen)
 
     def load_scripts(self):
-        """Load scripts from the database and add them to the list."""
-        scripts = database.get_all_scripts()
-        for script_data in scripts:
-            self.add_script_to_list(script_data)
+        """Load scripts based on the logged-in user's role."""
+        allowed_scripts = database.get_allowed_scripts_for_user(self.current_user)
+
+        all_scripts = database.get_all_scripts()
+
+        # Admin sees all scripts
+        if allowed_scripts == "ALL":
+            for script_data in all_scripts:
+                self.add_script_to_list(script_data)
+        else:
+            # Default Users only see specific scripts
+            for script_data in all_scripts:
+                if script_data['name'] in allowed_scripts:
+                    self.add_script_to_list(script_data)
 
     def add_script_to_list(self, script_data):
         item = QListWidgetItem(script_data['name'])
@@ -139,6 +172,12 @@ class ControlPanel(QWidget):
         item.setData(Qt.UserRole + 1, "idle")  # Initial status is 'idle'
         self.update_script_status(item, "idle")
         self.script_list.addItem(item)
+    def open_user_management(self):
+        """Open the User Management dialog."""
+        from user_manager import UserManagerDialog
+        dialog = UserManagerDialog(self)
+        dialog.exec_()
+
 
     def add_script(self):
         dialog = ScriptDialog(parent=self)
@@ -181,6 +220,8 @@ class ControlPanel(QWidget):
     def show_main_screen(self):
         """Switch back to the main screen."""
         self.stacked_widget.setCurrentIndex(0)
+
+    
 
     # Define the missing `run_script` method
     def run_script(self):
