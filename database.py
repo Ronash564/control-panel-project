@@ -113,13 +113,37 @@ def add_user(username, password, role):
     print(f"User '{username}' added with role '{role}'.")
 
 def get_all_users():
-    """Retrieve all users from the database."""
+    """Retrieve all users with their details from the database."""
     connection = sqlite3.connect(DB_FILE)
     cursor = connection.cursor()
-    cursor.execute("SELECT username, role FROM users")
+
+    # Ensure allowed_scripts exists for each user based on their role
+    query = '''
+    SELECT u.username, u.password, r.allowed_scripts 
+    FROM users u
+    LEFT JOIN roles r ON u.role = r.role_name
+    '''
+    cursor.execute(query)
     users = cursor.fetchall()
     connection.close()
-    return [{"username": user[0], "role": user[1]} for user in users]
+
+    return [{"username": user[0], "password": user[1], "allowed_scripts": user[2] or ""} for user in users]
+def add_script(name, path, description):
+    """Add a new script to the database."""
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO scripts (name, path, description) VALUES (?, ?, ?)",
+            (name, path, description),
+        )
+        connection.commit()
+        print(f"Script '{name}' added successfully.")
+    except sqlite3.IntegrityError as e:
+        print(f"Error: Script '{name}' already exists. {e}")
+    finally:
+        connection.close()
+
 
 if __name__ == "__main__":
     initialize_database()  # Create tables if they don't exist
