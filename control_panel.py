@@ -175,8 +175,9 @@ class ControlPanel(QWidget):
     def open_user_management(self):
         """Open the User Management dialog."""
         from user_manager import UserManagerDialog
-        dialog = UserManagerDialog(self)
+        dialog = UserManagerDialog(self, self.current_user['role'])  # Pass the role
         dialog.exec_()
+
 
 
     def add_script(self):

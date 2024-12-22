@@ -36,6 +36,7 @@ def initialize_database():
     ''')
 
     # Add 'role' column to the users table if it does not exist
+# Add 'role' column to users table if missing
     cursor.execute("PRAGMA table_info(users)")
     columns = [column[1] for column in cursor.fetchall()]
     if "role" not in columns:
@@ -90,6 +91,14 @@ def get_allowed_scripts_for_user(role):
     if allowed_scripts and allowed_scripts[0] == "ALL":
         return "ALL"  # Admin role gets access to all scripts
     return allowed_scripts[0].split(",") if allowed_scripts else []
+def delete_user(username):
+    """Delete a user from the database by username."""
+    connection = sqlite3.connect(DB_FILE)
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM users WHERE username = ?", (username,))
+    connection.commit()
+    connection.close()
+    print(f"User '{username}' deleted from the database.")
 
 def get_all_scripts():
     """Retrieve all scripts from the database."""
