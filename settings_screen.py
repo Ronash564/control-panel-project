@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, 
-    QPushButton, QLineEdit, QFileDialog, QGroupBox, QMessageBox
+    QPushButton, QLineEdit, QFileDialog, QGroupBox, QMessageBox, QDialog
 )
+
 from PyQt5.QtCore import Qt
-from user_manager import UserManagerDialog  # Import your UserManagerDialog
+from user_manager import UserManagerDialog
 from styles import get_light_mode_stylesheet, get_dark_mode_stylesheet  # Import the styles from styles.py
 
 class SettingsScreen(QWidget):
@@ -51,7 +52,7 @@ class SettingsScreen(QWidget):
         # User Management Section
         user_management_group = QGroupBox("User Management")
         user_management_layout = QVBoxLayout()
-        self.add_user_button = QPushButton("Add User")
+        self.add_user_button = QPushButton("Manage Scripts")
         self.add_user_button.clicked.connect(self.open_user_manager)
         user_management_layout.addWidget(self.add_user_button)
         user_management_group.setLayout(user_management_layout)
@@ -99,7 +100,8 @@ class SettingsScreen(QWidget):
             print("Dark mode enabled.")
         else:
             self.parent().parent().setStyleSheet(get_light_mode_stylesheet())
-            print("Dark mode disabled.")    
+            print("Dark mode disabled.")
+
     def reset_settings(self):
         """Reset all settings to default."""
         self.dark_mode_checkbox.setChecked(False)
@@ -108,9 +110,10 @@ class SettingsScreen(QWidget):
         print("Settings reset to default.")
 
     def open_user_manager(self):
-        """Open the Add User dialog."""
+        """Open the User Management dialog."""
         dialog = UserManagerDialog(self)
         dialog.exec_()
+
 
     def go_back(self):
         """Return to the main screen."""

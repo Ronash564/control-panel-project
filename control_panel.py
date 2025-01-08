@@ -17,6 +17,8 @@ from PyQt5.QtCore import QSize
 from login_dialog import LoginDialog
 from PyQt5.QtWidgets import QMessageBox
 from settings_screen import SettingsScreen
+from user_manager import ScriptSelectionDialog
+from database import get_connection
 
 
 class ControlPanel(QWidget):
@@ -104,6 +106,7 @@ class ControlPanel(QWidget):
             self.manage_users_button.clicked.connect(self.open_user_management)
             button_layout.addWidget(self.manage_users_button)
 
+
         # Edit Script Button
         self.edit_button = QPushButton("Edit Selected Script")
         self.edit_button.clicked.connect(self.edit_script)
@@ -147,22 +150,17 @@ class ControlPanel(QWidget):
 
 
     def load_scripts(self):
-        """Load scripts based on the logged-in user's role."""
-        allowed_scripts = database.get_allowed_scripts_for_user(self.current_user['role'])
-
-
-
         all_scripts = database.get_all_scripts()
+        allowed_scripts = (
+            [script['name'] for script in all_scripts] 
+            if self.current_user['role'] == "Admin" 
+            else database.get_allowed_scripts_for_user(self.current_user['username'])
+        )
 
-        # Admin sees all scripts
-        if allowed_scripts == "ALL":
-            for script_data in all_scripts:
+        for script_data in all_scripts:
+            if script_data['name'] in allowed_scripts or allowed_scripts == "ALL":
                 self.add_script_to_list(script_data)
-        else:
-            # Default Users only see specific scripts
-            for script_data in all_scripts:
-                if script_data['name'] in allowed_scripts:
-                    self.add_script_to_list(script_data)
+
     
     def add_script_to_list(self, script_data):
         item = QListWidgetItem(script_data['name'])
@@ -170,13 +168,13 @@ class ControlPanel(QWidget):
         item.setData(Qt.UserRole + 1, "idle")  # Initial status is 'idle'
         self.update_script_status(item, "idle")
         self.script_list.addItem(item)
+    
     def open_user_management(self):
         """Open the User Management dialog."""
-        from user_manager import UserManagerDialog
-        dialog = UserManagerDialog(self, self.current_user['role'])  # Access 'role' directly from the dictionary
-  # Assuming the role is the second element
- # Pass the role
-        dialog.exec_()
+        from user_manager import UserManagerDialog  # Ensure the correct class is imported
+        dialog = UserManagerDialog(self)  # Initialize the UserManagerDialog
+        dialog.exec_()  # Display the dialog
+
 
 
     def open_settings(self):
@@ -217,6 +215,10 @@ class ControlPanel(QWidget):
             self.mini_log_viewer.clear()
             print("Navigating to Script Detail Screen")
             self.stacked_widget.setCurrentWidget(self.script_detail_screen)  # Correctly point to the script detail screen
+        if not item:
+            QMessageBox.warning(self, "No Script Selected", "Please select a script to view its details.")
+            return
+
 
 
     def show_main_screen(self):
@@ -299,7 +301,12 @@ class ControlPanel(QWidget):
     def open_settings(self):
         """Switch to the settings screen."""
         print("Navigating to Settings Screen")
-        self.stacked_widget.setCurrentWidget(self.settings_screen)
+        self.stacked_widget.setCurrentWidget(self.settings_screen) 
+    
+    def get_available_scripts(self):
+        """Fetch a list of all available scripts."""
+        return [script['name'] for script in database.get_all_scripts()]
+
 
 
 
