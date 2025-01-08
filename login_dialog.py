@@ -41,7 +41,7 @@ class LoginDialog(QDialog):
 
         user = database.get_user(username, password)  # Check database for user
         if user:
-            self.authenticated_user = user['username']
+            self.authenticated_user = user  # Keep the full user object (username and role)
             self.accept()  # Close the dialog with success
         else:
             QMessageBox.warning(self, "Error", "Invalid username or password!")

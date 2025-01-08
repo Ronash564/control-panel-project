@@ -41,7 +41,7 @@ class UserManagerDialog(QDialog):
         self.add_user_button = QPushButton("Add User")
         self.add_user_button.clicked.connect(self.add_user)
 
-        # Only show the "Add User" button if the role is Admin
+        # Show Add User button only for Admins
         if user_role == "Admin":
             button_layout.addWidget(self.add_user_button)
 
@@ -54,6 +54,7 @@ class UserManagerDialog(QDialog):
         button_layout.addWidget(self.close_button)
 
         layout.addLayout(button_layout)
+
 
 
     def load_users(self):

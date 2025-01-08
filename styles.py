@@ -34,30 +34,25 @@ def get_light_mode_stylesheet():
 
 def get_dark_mode_stylesheet():
     return """
-    QWidget {
-        background-color: #2E2E2E;
-        color: #FFFFFF;
-    }
-    QPushButton {
-        background-color: #3E3E3E;
-        border: 1px solid #5A5A5A;
-        padding: 5px;
-        color: #FFFFFF;
-    }
-    QPushButton:hover {
-        background-color: #4E4E4E;
-    }
-    QCheckBox {
-        color: #FFFFFF;
-    }
-    QListWidget {
-        background-color: #3E3E3E;
-        color: #FFFFFF;
-        border: 1px solid #5A5A5A;
-    }
-    QTextEdit {
-        background-color: #3E3E3E;
-        color: #FFFFFF;
-        border: 1px solid #5A5A5A;
-    }
+        QWidget {
+            background-color: #2b2b2b;
+            color: #ffffff;
+        }
+        QLineEdit, QTextEdit {
+            background-color: #3c3f41;
+            color: #ffffff;
+        }
+        QPushButton {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        QPushButton:hover {
+            background-color: #45a049;
+        }
+        QLabel {
+            color: #ffffff;
+        }
     """
+

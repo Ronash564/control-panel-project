@@ -15,6 +15,9 @@ from styles import get_light_mode_stylesheet, get_dark_mode_stylesheet  # Import
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QSize
 from login_dialog import LoginDialog
+from PyQt5.QtWidgets import QMessageBox
+from settings_screen import SettingsScreen
+
 
 class ControlPanel(QWidget):
     def __init__(self):
@@ -37,21 +40,16 @@ class ControlPanel(QWidget):
         # QStackedWidget to hold multiple screens
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
-        
-        # Dark mode toggle
-        toggle_layout = QHBoxLayout()
-        dark_mode_label = QLabel("Dark Mode:")
-        self.dark_mode_toggle = QCheckBox()
-        self.dark_mode_toggle.stateChanged.connect(self.toggle_dark_mode)
-        toggle_layout.addWidget(dark_mode_label)
-        toggle_layout.addWidget(self.dark_mode_toggle)
-        main_layout.addLayout(toggle_layout)
+
+        # Initialize screens and add them to the stacked widget
+        self.init_main_screen()
+        self.init_settings_screen()
+        self.init_script_detail_screen()
+
+        # Explicitly set the main screen as the current screen
+        self.stacked_widget.setCurrentWidget(self.stacked_widget.widget(0))  # Assuming the main screen is the first screen added
 
         self.setStyleSheet(get_light_mode_stylesheet())
-
-        # Initialize and add screens to the stacked widget
-        self.init_main_screen()
-        self.init_script_detail_screen()
 
         # ScriptRunner instance for handling script processes
         self.script_runner = ScriptRunner(self.handle_stdout, self.handle_stderr, self.process_finished)
@@ -61,83 +59,79 @@ class ControlPanel(QWidget):
         self.reset_timer.setSingleShot(True)
         self.reset_timer.timeout.connect(self.reset_script_status)
 
+
     def init_main_screen(self):
         """Initialize the main screen with script list and controls."""
         main_screen = QWidget()
         main_layout = QVBoxLayout(main_screen)
-        
+
+        # Top-right settings button
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.addStretch()  # Push the button to the right
+
+        # Add the gear icon
+        gear_icon_path = os.path.join(os.path.dirname(__file__), "Icons/gear.png")
+        self.settings_button = QPushButton()
+        self.settings_button.setIcon(QIcon(gear_icon_path))
+        self.settings_button.setIconSize(QSize(24, 24))
+        self.settings_button.setFlat(True)  # Remove button borders
+        self.settings_button.clicked.connect(self.open_settings)  # Connect to a method for settings
+
+        top_bar_layout.addWidget(self.settings_button)
+        main_layout.addLayout(top_bar_layout)
+
         # Script List
         self.script_list = QListWidget()
         self.load_scripts()
         main_layout.addWidget(self.script_list)
 
-        # Connect double-click signal to open script details
-        self.script_list.itemDoubleClicked.connect(self.open_script_detail_screen)
-
         # Log viewer for script output
         self.log_viewer = QTextEdit()
         self.log_viewer.setReadOnly(True)
         main_layout.addWidget(self.log_viewer)
-        
+
         # Button layout
         button_layout = QHBoxLayout()
-        
-        icon_path = os.path.join(os.path.dirname(__file__), "icons/plus.png")
 
+        # Add Script Button
         self.add_button = QPushButton("Add New Script")
-        self.add_button.setIcon(QIcon(icon_path))  # Use absolute path
-        self.add_button.setIconSize(QSize(16, 16))  # Explicitly set icon size
         self.add_button.clicked.connect(self.add_script)
         button_layout.addWidget(self.add_button)
-        
-        #adding users button
-        self.manage_users_button = QPushButton("Manage Users")
-        self.manage_users_button.setIcon(QIcon(os.path.join(os.path.dirname(__file__), "icons/manage_users.png")))
-        self.manage_users_button.setIconSize(QSize(16, 16))
-        self.manage_users_button.clicked.connect(self.open_user_management)
 
-        button_layout.addWidget(self.manage_users_button)
+        # Manage Users Button (Visible only for Admins)
+        if self.current_user['role'] == "Admin":
+            self.manage_users_button = QPushButton("Manage Users")
+            self.manage_users_button.clicked.connect(self.open_user_management)
+            button_layout.addWidget(self.manage_users_button)
 
-
+        # Edit Script Button
         self.edit_button = QPushButton("Edit Selected Script")
         self.edit_button.clicked.connect(self.edit_script)
         button_layout.addWidget(self.edit_button)
 
-        # Show Script button to navigate to script details
+        # Show Script Button
         self.show_button = QPushButton("Show Script")
         self.show_button.clicked.connect(lambda: self.open_script_detail_screen(self.script_list.currentItem()))
         button_layout.addWidget(self.show_button)
-        
+
         main_layout.addLayout(button_layout)
 
         # Add the main screen to the stacked widget
         self.stacked_widget.addWidget(main_screen)
 
+
+
     def init_script_detail_screen(self):
-        """Initialize the script detail screen for displaying script information."""
+        """Initialize the script detail screen and add it to the stacked widget."""
         detail_screen = QWidget()
         detail_layout = QVBoxLayout(detail_screen)
-        
-        # Script detail view (you can expand this with more information as needed)
+
+        # Script detail view
         self.script_detail_view = QTextEdit()
         self.script_detail_view.setReadOnly(True)
         detail_layout.addWidget(self.script_detail_view)
 
-        # Run and Stop buttons in the top right
-        top_right_buttons_layout = QHBoxLayout()
-        self.run_button = QPushButton("Run")
-        self.run_button.setStyleSheet("background-color: green; color: white;")
-        self.run_button.clicked.connect(self.run_script)  # Correct reference to run_script
-        
-        self.stop_button = QPushButton("Stop")
-        self.stop_button.setStyleSheet("background-color: red; color: white;")
-        self.stop_button.clicked.connect(self.stop_script)
-
-        top_right_buttons_layout.addWidget(self.run_button)
-        top_right_buttons_layout.addWidget(self.stop_button)
-        detail_layout.addLayout(top_right_buttons_layout)
-
-        # Mini log viewer for script output in the bottom right
+        # Mini log viewer for script output
         self.mini_log_viewer = QTextEdit()
         self.mini_log_viewer.setReadOnly(True)
         detail_layout.addWidget(self.mini_log_viewer)
@@ -148,11 +142,15 @@ class ControlPanel(QWidget):
         detail_layout.addWidget(back_button)
 
         # Add the script detail screen to the stacked widget
-        self.stacked_widget.addWidget(detail_screen)
+        self.script_detail_screen = detail_screen
+        self.stacked_widget.addWidget(self.script_detail_screen)
+
 
     def load_scripts(self):
         """Load scripts based on the logged-in user's role."""
-        allowed_scripts = database.get_allowed_scripts_for_user(self.current_user)
+        allowed_scripts = database.get_allowed_scripts_for_user(self.current_user['role'])
+
+
 
         all_scripts = database.get_all_scripts()
 
@@ -165,7 +163,7 @@ class ControlPanel(QWidget):
             for script_data in all_scripts:
                 if script_data['name'] in allowed_scripts:
                     self.add_script_to_list(script_data)
-
+    
     def add_script_to_list(self, script_data):
         item = QListWidgetItem(script_data['name'])
         item.setData(Qt.UserRole, script_data)
@@ -175,10 +173,15 @@ class ControlPanel(QWidget):
     def open_user_management(self):
         """Open the User Management dialog."""
         from user_manager import UserManagerDialog
-        dialog = UserManagerDialog(self, self.current_user['role'])  # Pass the role
+        dialog = UserManagerDialog(self, self.current_user['role'])  # Access 'role' directly from the dictionary
+  # Assuming the role is the second element
+ # Pass the role
         dialog.exec_()
 
 
+    def open_settings(self):
+        """Open the Settings dialog."""
+        QMessageBox.information(self, "Settings", "Settings functionality coming soon!")
 
     def add_script(self):
         dialog = ScriptDialog(parent=self)
@@ -204,19 +207,17 @@ class ControlPanel(QWidget):
                 selected_item.setData(Qt.UserRole, updated_script_data)
 
     def open_script_detail_screen(self, item):
-        """Open the script detail screen and display details for the selected script."""
+        """Switch to the script detail screen and display details for the selected script."""
         if item:
             script_data = item.data(Qt.UserRole)
-            # Clear any previous content before showing new script details
-            self.script_detail_view.clear()
-            # Display script details
+            # Clear and display script details
             self.script_detail_view.setText(f"Script Name: {script_data['name']}\n"
                                             f"Path: {script_data['path']}\n"
                                             f"Description: {script_data['description']}")
-            # Clear the mini log viewer as well
             self.mini_log_viewer.clear()
-            # Switch to script detail screen
-            self.stacked_widget.setCurrentIndex(1)
+            print("Navigating to Script Detail Screen")
+            self.stacked_widget.setCurrentWidget(self.script_detail_screen)  # Correctly point to the script detail screen
+
 
     def show_main_screen(self):
         """Switch back to the main screen."""
@@ -288,6 +289,20 @@ class ControlPanel(QWidget):
             for i in range(self.script_list.count()):
                 item = self.script_list.item(i)
                 item.setForeground(QColor("black"))
+    def init_settings_screen(self):
+        """Initialize the settings screen and add it to the stacked widget."""
+        self.settings_screen = SettingsScreen(self.stacked_widget)
+        self.settings_screen.setStyleSheet(self.styleSheet())  # Apply global styles
+        self.stacked_widget.addWidget(self.settings_screen)
+
+
+    def open_settings(self):
+        """Switch to the settings screen."""
+        print("Navigating to Settings Screen")
+        self.stacked_widget.setCurrentWidget(self.settings_screen)
+
+
+
 
 app = QApplication(sys.argv)
 window = ControlPanel()
