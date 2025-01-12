@@ -26,11 +26,19 @@ class ControlPanel(QWidget):
         super().__init__()
 
         login_dialog = LoginDialog()
-        if login_dialog.exec_() == QDialog.Accepted:
-            self.current_user = login_dialog.authenticated_user
-            print(f"Welcome, {self.current_user}!")
-        else:
-            sys.exit() 
+        try:
+            if login_dialog.exec_() == QDialog.Accepted:
+                self.current_user = login_dialog.authenticated_user
+                print(f"Logged in user: {self.current_user}")  # Debugging
+                if not self.current_user:
+                    raise ValueError("Authenticated user is None or invalid!")
+            else:
+                print("Login was canceled.")
+                sys.exit()
+        except Exception as e:
+            print(f"Error during login or transition: {e}")
+            sys.exit()
+
         
         self.setWindowTitle("Script Control Panel")
         self.setGeometry(300, 100, 800, 600)
@@ -150,16 +158,19 @@ class ControlPanel(QWidget):
 
 
     def load_scripts(self):
-        all_scripts = database.get_all_scripts()
-        allowed_scripts = (
-            [script['name'] for script in all_scripts] 
-            if self.current_user['role'] == "Admin" 
-            else database.get_allowed_scripts_for_user(self.current_user['username'])
-        )
-
-        for script_data in all_scripts:
-            if script_data['name'] in allowed_scripts or allowed_scripts == "ALL":
-                self.add_script_to_list(script_data)
+        try:
+            print(f"Loading scripts for user: {self.current_user}")  # Debugging
+            allowed_scripts = database.get_allowed_scripts_for_user(self.current_user["role"])
+            print(f"Allowed scripts: {allowed_scripts}")  # Debugging
+            ...
+        except KeyError as e:
+            print(f"KeyError: {e}")
+            QMessageBox.critical(self, "Error", "User data is incomplete or invalid.")
+            sys.exit()
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            QMessageBox.critical(self, "Error", f"Unexpected error: {e}")
+            sys.exit()
 
     
     def add_script_to_list(self, script_data):

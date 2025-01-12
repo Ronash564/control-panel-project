@@ -1,5 +1,9 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 import database
+import logging
+
+# Set up logging for debugging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class LoginDialog(QDialog):
     def __init__(self, parent=None):
@@ -31,17 +35,25 @@ class LoginDialog(QDialog):
         self.authenticated_user = None
 
     def authenticate_user(self):
-        """Check user credentials and validate login."""
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
 
         if not username or not password:
-            QMessageBox.warning(self, "Error", "Username and Password cannot be empty!")
+            logging.warning("Empty username or password provided.")
+            QMessageBox.warning(self, "Login Failed", "Username and password cannot be empty!")
             return
 
-        user = database.get_user(username, password)  # Check database for user
-        if user:
-            self.authenticated_user = user  # Keep the full user object (username and role)
-            self.accept()  # Close the dialog with success
-        else:
-            QMessageBox.warning(self, "Error", "Invalid username or password!")
+        logging.info(f"Attempting to authenticate user: {username}")
+        try:
+            user = database.get_user(username, password)
+            logging.debug(f"Database response for user: {user}")  # Check what `get_user` returns
+            if user:
+                self.authenticated_user = user
+                logging.info(f"User authenticated successfully: {self.authenticated_user}")
+                self.accept()
+            else:
+                logging.warning("Invalid credentials provided.")
+                QMessageBox.warning(self, "Login Failed", "Invalid username or password.")
+        except Exception as e:
+            logging.error(f"Unexpected error during authentication: {e}", exc_info=True)
+            QMessageBox.critical(self, "Error", f"An error occurred: {e}")
